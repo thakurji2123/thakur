@@ -5,33 +5,30 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.http import MediaFileUpload
 
 VIDEO_FILE = "Final_Long_Educational_Video.mp4"
-CATEGORY_ID = "24" 
+CATEGORY_ID = "22" # 22 is 'People & Blogs' (Best for Religious/Story channels)
 
 # ==========================================
-# 🎲 DYNAMIC UNIQUE TITLE/DESC GENERATOR
+# 🎲 USA CHRISTIAN UNIQUE TITLE/DESC GENERATOR
 # ==========================================
 
 def generate_unique_metadata():
-    # In tukdon ko jod kar title banega (Taaki kabhi copy/duplicate na ho)
-    hooks = ["Rula dene wali kahani", "Dil chhu lene wali baat", "Zindagi ki sachai", "Ek sachi seekh", "Aisa kisi ke sath na ho", "Rongte khade kar dene wali story"]
-    topics = ["Pyaar ka dard", "Rishton ki ehmiyat", "Akelepan ka safar", "Maa Baap ka pyaar", "Dhoka aur vishwas", "Kismat ka khel"]
-    emojis = ["💔", "🥺", "😭", "❤️", "✨", "🙏", "😔"]
+    hooks = ["A Message From God", "Jesus Says", "A Miracle Happened", "Words of Jesus", "God is Watching", "A Powerful Bible Story"]
+    topics = ["Do Not Give Up", "The Power of Faith", "Overcoming Fear", "God's Love For You", "Finding Peace", "A Lesson for Your Soul"]
+    emojis = ["✝️", "🙏", "🕊️", "✨", "❤️", "⛪"]
 
-    # Generate Unique Title: "Rula dene wali kahani - Pyaar ka dard 💔"
+    # Generates: "A Message From God - The Power of Faith 🙏"
     unique_title = f"{random.choice(hooks)} - {random.choice(topics)} {random.choice(emojis)}"
 
-    # Generate Unique Description
     desc_intros = [
-        "Agar aapne ye video nahi dekhi, toh bohot kuch miss kar doge.", 
-        "Dosto is kahani ko sunkar aapke bhi aansu aa jayenge.", 
-        "Zindagi me kabhi kabhi aisi seekh milti hai jo humesha yaad rehti hai.",
-        "Kahaani jo aapke dil ko chhu jayegi, end tak zaroor dekhna."
+        "Welcome! If you found this video, it is not an accident. God led you here.", 
+        "Take a moment to listen to this beautiful story of Jesus Christ.", 
+        "May this message bring peace and blessings to your life today."
     ]
     desc_ctas = [
-        "\n\nVideo pasand aaye toh Like aur Subscribe zaroor karein! 🙏", 
-        "\n\nApne dosto ke sath is seekh ko share karein aur Channel ko subscribe karna na bhoolein! ❤️"
+        "\n\nIf you believe in God, hit the LIKE button and SUBSCRIBE for daily blessings! 🙏", 
+        "\n\nPlease SHARE this message with someone who needs it, and SUBSCRIBE to our channel! ✝️"
     ]
-    tags = "\n\n#EmotionalStory #HindiStories #LifeLessons #Trending #HeartTouching #SadStory"
+    tags = "\n\n#Jesus #ChristianMotivation #Faith #BibleStory #God #Christianity #Pray"
 
     unique_description = f"{random.choice(desc_intros)} {random.choice(desc_ctas)} {tags}"
     
@@ -39,12 +36,9 @@ def generate_unique_metadata():
 
 def upload_video():
     if not os.path.exists(VIDEO_FILE):
-        print(f"❌ Error: {VIDEO_FILE} not found!")
         return
 
-    # Random Function call kiya
     selected_title, selected_desc = generate_unique_metadata()
-
     print(f"📌 FINAL TITLE: {selected_title}")
     
     creds = Credentials.from_authorized_user_file('token.json', ['https://www.googleapis.com/auth/youtube.upload'])
@@ -55,8 +49,7 @@ def upload_video():
             "categoryId": CATEGORY_ID,
             "title": selected_title,
             "description": selected_desc,
-            # Tags ko array me convert kiya
-            "tags": ["Hindi Stories", "Emotional", "Moral Story", "Trending", "Life Lesson"]
+            "tags": ["Jesus Christ", "Christian Motivation", "Bible Stories", "Faith", "God", "Pray", "USA"]
         },
         "status": {
             "privacyStatus": "public", 
