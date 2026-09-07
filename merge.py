@@ -14,7 +14,7 @@ IMAGE_FOLDER = "ai_generated_images"
 FINAL_OUTPUT = "Final_Long_Educational_Video.mp4"
 
 # ==========================================
-CHANNEL_NAME = "@HolyFaithStories"   # <--- Apna English Channel Naam Dalo
+CHANNEL_NAME = "@bro thakur"   # <--- Apna English Channel Naam Dalo
 
 # English Intro Hook
 INTRO_HOOK_TEXT = "Welcome, brothers and sisters. Today, we look at a powerful message from the life of Jesus Christ. Watch till the end, and let God bless your soul."
