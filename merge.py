@@ -145,4 +145,4 @@ async def main():
     print(f"✅ DONE! Total Video Length: {round(final_video.duration/60, 2)} Minutes")
 
 if __name__ == "__main__":
-    asyncio.run(main())s
+    asyncio.run(main())
