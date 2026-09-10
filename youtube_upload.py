@@ -1,45 +1,35 @@
+# youtube_upload.py
 import os
-import random
+import json
 import googleapiclient.discovery
 from google.oauth2.credentials import Credentials
 from googleapiclient.http import MediaFileUpload
 
 VIDEO_FILE = "Final_Long_Educational_Video.mp4"
-CATEGORY_ID = "22" # 22 is 'People & Blogs' (Best for Religious/Story channels)
-
-# ==========================================
-# 🎲 USA CHRISTIAN UNIQUE TITLE/DESC GENERATOR
-# ==========================================
-
-def generate_unique_metadata():
-    hooks = ["A Message From God", "Jesus Says", "A Miracle Happened", "Words of Jesus", "God is Watching", "A Powerful Bible Story"]
-    topics = ["Do Not Give Up", "The Power of Faith", "Overcoming Fear", "God's Love For You", "Finding Peace", "A Lesson for Your Soul"]
-    emojis = ["✝️", "🙏", "🕊️", "✨", "❤️", "⛪"]
-
-    # Generates: "A Message From God - The Power of Faith 🙏"
-    unique_title = f"{random.choice(hooks)} - {random.choice(topics)} {random.choice(emojis)}"
-
-    desc_intros = [
-        "Welcome! If you found this video, it is not an accident. God led you here.", 
-        "Take a moment to listen to this beautiful story of Jesus Christ.", 
-        "May this message bring peace and blessings to your life today."
-    ]
-    desc_ctas = [
-        "\n\nIf you believe in God, hit the LIKE button and SUBSCRIBE for daily blessings! 🙏", 
-        "\n\nPlease SHARE this message with someone who needs it, and SUBSCRIBE to our channel! ✝️"
-    ]
-    tags = "\n\n#Jesus #ChristianMotivation #Faith #BibleStory #God #Christianity #Pray"
-
-    unique_description = f"{random.choice(desc_intros)} {random.choice(desc_ctas)} {tags}"
-    
-    return unique_title, unique_description
+META_FILE = "metadata.json"
+CATEGORY_ID = "22" # People & Blogs
 
 def upload_video():
     if not os.path.exists(VIDEO_FILE):
+        print("❌ Video file not found!")
+        return
+        
+    if not os.path.exists(META_FILE):
+        print("❌ Metadata file not found!")
         return
 
-    selected_title, selected_desc = generate_unique_metadata()
-    print(f"📌 FINAL TITLE: {selected_title}")
+    # Load Gemini Generated Metadata
+    with open(META_FILE, "r", encoding="utf-8") as f:
+        meta_data = json.load(f)
+
+    title = meta_data.get("title", "A Message From God 🙏")
+    
+    # Adding AI disclaimer in description (Required by YouTube Policy for AI content)
+    description = meta_data.get("description", "") + "\n\n[Disclosure: The visuals and voiceover in this video were synthetically generated using AI technology to bring this story to life.]"
+    
+    tags = [tag.strip() for tag in meta_data.get("tags", "").split(",")]
+
+    print(f"📌 UPLOADING: {title}")
     
     creds = Credentials.from_authorized_user_file('token.json', ['https://www.googleapis.com/auth/youtube.upload'])
     youtube = googleapiclient.discovery.build("youtube", "v3", credentials=creds)
@@ -47,20 +37,26 @@ def upload_video():
     request_body = {
         "snippet": {
             "categoryId": CATEGORY_ID,
-            "title": selected_title,
-            "description": selected_desc,
-            "tags": ["Jesus Christ", "Christian Motivation", "Bible Stories", "Faith", "God", "Pray", "USA"]
+            "title": title[:100],
+            "description": description[:5000],
+            "tags": tags[:15]
         },
         "status": {
             "privacyStatus": "public", 
-            "selfDeclaredMadeForKids": False
+            "selfDeclaredMadeForKids": False,
+            # YouTube API abhi 'AlteredContent' field direct support nahi karta payload mein, 
+            # isliye humne description mein transparently declare kar diya hai.
         }
     }
 
     media_file = MediaFileUpload(VIDEO_FILE, chunksize=-1, resumable=True, mimetype="video/mp4")
     request = youtube.videos().insert(part="snippet,status", body=request_body, media_body=media_file)
-    response = request.execute()
-    print(f"✅ VIDEO SUCCESSFULLY UPLOADED! Link: https://youtu.be/{response['id']}")
+    
+    try:
+        response = request.execute()
+        print(f"✅ VIDEO SUCCESSFULLY UPLOADED! Link: https://youtu.be/{response['id']}")
+    except Exception as e:
+        print(f"❌ Upload Failed: {e}")
 
 if __name__ == "__main__":
     upload_video()
