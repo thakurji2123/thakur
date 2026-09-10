@@ -56,13 +56,17 @@ async def main():
     await generate_voiceover(INTRO_HOOK_TEXT, intro_audio_path)
     
     scenes = []
-    with open(PROMPT_FILE, "r", encoding="utf-8") as f:
-        for idx, line in enumerate(f):
-            line = line.strip()
-            if line:
-                parts = line.split('|')
-                vo_text = parts[1].strip() if len(parts) > 1 else ""
-                scenes.append({"video_num": idx + 1, "voiceover": vo_text})
+    if os.path.exists(PROMPT_FILE):
+        with open(PROMPT_FILE, "r", encoding="utf-8") as f:
+            for idx, line in enumerate(f):
+                line = line.strip()
+                if line:
+                    parts = line.split('|')
+                    vo_text = parts[1].strip() if len(parts) > 1 else ""
+                    scenes.append({"video_num": idx + 1, "voiceover": vo_text})
+    else:
+        print(f"❌ Error: {PROMPT_FILE} not found!")
+        return
 
     final_clips = []
     
@@ -73,35 +77,61 @@ async def main():
         img_path = os.path.join(IMAGE_FOLDER, f"Generated_Image_{v_num}.jpg")
         audio_path = os.path.join(IMAGE_FOLDER, f"Voice_{v_num}.mp3")
         
-        if not os.path.exists(img_path): continue
+        # 1. Check if file exists
+        if not os.path.exists(img_path): 
+            print(f"⚠️ Image {v_num} not found. Skipping...")
+            continue
+        
+        # 2. CHECK IF IMAGE IS CORRUPT OR 0 BYTES
+        if os.path.getsize(img_path) < 1024:  # Agar image 1KB se choti hai toh wo fake/corrupt hai
+            print(f"⚠️ Skipping Image {v_num} - File is corrupted or empty.")
+            continue
             
         target_audio = intro_audio_path if i == 0 else audio_path
         text_to_speak = INTRO_HOOK_TEXT if i == 0 else vo_text
         
-        if i > 0 and vo_text: await generate_voiceover(vo_text, audio_path)
-        if not os.path.exists(target_audio): continue
-
-        audio = AudioFileClip(target_audio)
-        duration = audio.duration + 0.3 
-
-        img_clip = ImageClip(img_path).set_duration(duration)
-        img_clip = img_clip.resize(height=1080) 
-        img_clip = img_clip.fx(vfx.colorx, 1.15).fx(vfx.lum_contrast, lum=5, contrast=0.1).set_position("center")
+        if i > 0 and vo_text: 
+            await generate_voiceover(vo_text, audio_path)
         
-        if i % 2 == 0: img_clip = img_clip.resize(resize_func_zoomin)
-        else: img_clip = img_clip.resize(resize_func_zoomout)
+        if not os.path.exists(target_audio): 
+            continue
+
+        try:
+            # 3. Try to process the image and audio safely
+            audio = AudioFileClip(target_audio)
+            duration = audio.duration + 0.3 
+
+            img_clip = ImageClip(img_path).set_duration(duration)
+            img_clip = img_clip.resize(height=1080) 
+            img_clip = img_clip.fx(vfx.colorx, 1.15).fx(vfx.lum_contrast, lum=5, contrast=0.1).set_position("center")
             
-        bg_clip = ColorClip(size=(1920, 1080), color=(0, 0, 0)).set_duration(duration)
-        dynamic_captions = create_dynamic_captions(text_to_speak, duration)
-        
-        video_clip = CompositeVideoClip([bg_clip, img_clip] + dynamic_captions)
-        video_clip = video_clip.set_audio(audio)
-        
-        if i > 0: video_clip = video_clip.crossfadein(1.0)
-        final_clips.append(video_clip)
+            if i % 2 == 0: 
+                img_clip = img_clip.resize(resize_func_zoomin)
+            else: 
+                img_clip = img_clip.resize(resize_func_zoomout)
+                
+            bg_clip = ColorClip(size=(1920, 1080), color=(0, 0, 0)).set_duration(duration)
+            dynamic_captions = create_dynamic_captions(text_to_speak, duration)
+            
+            video_clip = CompositeVideoClip([bg_clip, img_clip] + dynamic_captions)
+            video_clip = video_clip.set_audio(audio)
+            
+            if i > 0: 
+                video_clip = video_clip.crossfadein(1.0)
+            
+            final_clips.append(video_clip)
+            print(f"✅ Processed Scene {v_num} successfully!")
+            
+        except Exception as e:
+            # Agar MoviePy image open nahi kar pata (corrupt Image)
+            print(f"⚠️ Failed to process scene {v_num}, skipping... Error: {e}")
+            continue
 
-    if not final_clips: return
+    if not final_clips: 
+        print("❌ No valid clips were generated. Exiting...")
+        return
 
+    print("⏳ Merging all clips, please wait...")
     final_video = concatenate_videoclips(final_clips, method="compose", padding=-0.5)
     
     watermark = TextClip(f" {CHANNEL_NAME} ", fontsize=45, color='white', font="Arial-Bold", bg_color='black')
@@ -119,6 +149,7 @@ async def main():
         final_mixed_audio = CompositeAudioClip([final_video.audio, bg_clip])
         final_video = final_video.set_audio(final_mixed_audio)
 
+    # Export
     final_video.write_videofile(FINAL_OUTPUT, fps=24, codec="libx264", audio_codec="aac")
     print("✅ US YOUTUBE READY MASTERPIECE DONE!!")
 
