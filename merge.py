@@ -15,22 +15,17 @@ FINAL_OUTPUT = "Final_Long_Educational_Video.mp4"
 
 # ==========================================
 CHANNEL_NAME = "@bro thakur"   # <--- Apna English Channel Naam Dalo
-
-# English Intro Hook
 INTRO_HOOK_TEXT = "Welcome, brothers and sisters. Today, we look at a powerful message from the life of Jesus Christ. Watch till the end, and let God bless your soul."
+MAX_VIDEO_DURATION = 14 * 60  # STRICT LIMIT: 14 Minutes (840 Seconds)
 # ==========================================
 
-# 🎙️ AMERICAN CINEMATIC VOICE (Christopher - Deep & Clear)
 async def generate_voiceover(text, output_file):
-    # Pitch halka sa kam kiya hai taaki awaz aur bhari (deep/godly) lage
     communicate = edge_tts.Communicate(text, "en-US-ChristopherNeural", rate="+5%", pitch="-5Hz", volume="+30%")
     await communicate.save(output_file)
 
-# 🎥 Zoom Effects
 def resize_func_zoomin(t): return 1 + 0.02 * t  
 def resize_func_zoomout(t): return 1.1 - 0.02 * t 
 
-# ✍️ DYNAMIC CAPTIONS (English ke hisab se)
 def create_dynamic_captions(text, duration):
     if not text: return []
     words = text.split()
@@ -40,7 +35,6 @@ def create_dynamic_captions(text, duration):
     text_clips = []
     current_time = 0
     for chunk in chunks:
-        # English fonts usually look good in White or Yellow. Let's keep Yellow.
         txt_clip = TextClip(chunk, fontsize=90, color='yellow', font="Arial-Bold", stroke_color='black', stroke_width=3)
         txt_clip = txt_clip.set_position(('center', 800))
         txt_clip = txt_clip.set_start(current_time).set_duration(time_per_chunk)
@@ -69,21 +63,23 @@ async def main():
         return
 
     final_clips = []
+    current_total_duration = 0  # Isse hum track karenge ki video kitni lambi ban chuki hai
     
     for i, scene in enumerate(scenes):
+        # ⏰ TIMING CHECK
+        if current_total_duration >= MAX_VIDEO_DURATION:
+            print("⏰ Reached 14-Minute Limit! Stopping here to avoid YouTube 15-min rejection.")
+            break
+
         v_num = scene['video_num']
         vo_text = scene['voiceover']
         
         img_path = os.path.join(IMAGE_FOLDER, f"Generated_Image_{v_num}.jpg")
         audio_path = os.path.join(IMAGE_FOLDER, f"Voice_{v_num}.mp3")
         
-        # 1. Check if file exists
-        if not os.path.exists(img_path): 
-            print(f"⚠️ Image {v_num} not found. Skipping...")
-            continue
+        if not os.path.exists(img_path): continue
         
-        # 2. CHECK IF IMAGE IS CORRUPT OR 0 BYTES
-        if os.path.getsize(img_path) < 1024:  # Agar image 1KB se choti hai toh wo fake/corrupt hai
+        if os.path.getsize(img_path) < 1024:
             print(f"⚠️ Skipping Image {v_num} - File is corrupted or empty.")
             continue
             
@@ -93,22 +89,21 @@ async def main():
         if i > 0 and vo_text: 
             await generate_voiceover(vo_text, audio_path)
         
-        if not os.path.exists(target_audio): 
-            continue
+        if not os.path.exists(target_audio): continue
 
         try:
-            # 3. Try to process the image and audio safely
             audio = AudioFileClip(target_audio)
             duration = audio.duration + 0.3 
+
+            # Add to total duration tracker
+            current_total_duration += duration
 
             img_clip = ImageClip(img_path).set_duration(duration)
             img_clip = img_clip.resize(height=1080) 
             img_clip = img_clip.fx(vfx.colorx, 1.15).fx(vfx.lum_contrast, lum=5, contrast=0.1).set_position("center")
             
-            if i % 2 == 0: 
-                img_clip = img_clip.resize(resize_func_zoomin)
-            else: 
-                img_clip = img_clip.resize(resize_func_zoomout)
+            if i % 2 == 0: img_clip = img_clip.resize(resize_func_zoomin)
+            else: img_clip = img_clip.resize(resize_func_zoomout)
                 
             bg_clip = ColorClip(size=(1920, 1080), color=(0, 0, 0)).set_duration(duration)
             dynamic_captions = create_dynamic_captions(text_to_speak, duration)
@@ -116,19 +111,17 @@ async def main():
             video_clip = CompositeVideoClip([bg_clip, img_clip] + dynamic_captions)
             video_clip = video_clip.set_audio(audio)
             
-            if i > 0: 
-                video_clip = video_clip.crossfadein(1.0)
+            if i > 0: video_clip = video_clip.crossfadein(1.0)
             
             final_clips.append(video_clip)
-            print(f"✅ Processed Scene {v_num} successfully!")
+            print(f"✅ Scene {v_num} | Length: {round(current_total_duration/60, 2)} Mins")
             
         except Exception as e:
-            # Agar MoviePy image open nahi kar pata (corrupt Image)
             print(f"⚠️ Failed to process scene {v_num}, skipping... Error: {e}")
             continue
 
     if not final_clips: 
-        print("❌ No valid clips were generated. Exiting...")
+        print("❌ No valid clips generated.")
         return
 
     print("⏳ Merging all clips, please wait...")
@@ -137,7 +130,6 @@ async def main():
     watermark = TextClip(f" {CHANNEL_NAME} ", fontsize=45, color='white', font="Arial-Bold", bg_color='black')
     watermark = watermark.set_opacity(0.4).set_position(("right", "top")).set_duration(final_video.duration)
     
-    # English Subscribe Text
     sub_text = TextClip("🔔 SUBSCRIBE FOR DAILY BLESSINGS!", fontsize=70, color='yellow', bg_color='red', font="Arial-Bold")
     sub_text = sub_text.set_position("center").set_duration(4).set_start(final_video.duration - 4).crossfadein(1)
 
@@ -149,9 +141,8 @@ async def main():
         final_mixed_audio = CompositeAudioClip([final_video.audio, bg_clip])
         final_video = final_video.set_audio(final_mixed_audio)
 
-    # Export
     final_video.write_videofile(FINAL_OUTPUT, fps=24, codec="libx264", audio_codec="aac")
-    print("✅ US YOUTUBE READY MASTERPIECE DONE!!")
+    print(f"✅ DONE! Total Video Length: {round(final_video.duration/60, 2)} Minutes")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main())s
