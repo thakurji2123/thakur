@@ -1,10 +1,8 @@
-# generate_prompts.py
 import os
 import sys
 import google.generativeai as genai
 import json
 
-# GitHub Secrets se API Key legi
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     print("❌ Gemini API Key missing!")
@@ -29,19 +27,27 @@ def main():
         print("❌ No topics left in topics.txt!")
         sys.exit(1)
 
-    # Pehla topic uthao
     current_topic = topics[0]
     print(f"🚀 Generating script for topic: {current_topic}")
 
-    # 1. GENERATE PROMPTS (Images + Voiceover)
+    # ==========================================
+    # 📝 SCRIPT GENERATION (Har image 5 second ke liye)
+    # ==========================================
     system_prompt = f"""
     You are a professional Christian/Educational YouTube scriptwriter. 
     Topic: "{current_topic}".
-    Create exactly 100 scenes for a video.
+    Create EXACTLY 160 scenes for a video.
+    
+    CRITICAL RULE FOR PACING:
+    Each voiceover text MUST be EXACTLY 10 to 14 words long. No more, no less.
+    This ensures that each image stays on screen for exactly 5 seconds when read by an AI voice.
+    
     Strict Format: Image Description | Voiceover text
     Do not add numbers, markdown, intros, or blank lines. Just the exact format.
+    Keep the story engaging and emotional. Do not stop until you generate all 160 lines.
+    
     Example:
-    Jesus walking in Jerusalem, cinematic lighting, 16:9 | God has a plan for your life today.
+    Jesus walking in Jerusalem, cinematic lighting, 16:9 | The path was difficult, but Jesus kept moving forward.
     """
     
     response = model.generate_content(system_prompt)
@@ -49,9 +55,9 @@ def main():
 
     with open(PROMPTS_FILE, "w", encoding="utf-8") as f:
         f.write(prompts_text)
-    print("✅ prompts.txt successfully created!")
+    print("✅ prompts.txt successfully created with ~160 scenes!")
 
-    # 2. GENERATE VIRAL YOUTUBE METADATA
+    # Generate Viral MetaData
     meta_prompt = f"""
     Topic: "{current_topic}".
     Generate a viral YouTube Title (max 60 chars), Description, and Tags (comma separated) for a US Christian audience.
@@ -65,7 +71,7 @@ def main():
         f.write(meta_json_str)
     print("✅ metadata.json successfully created!")
 
-    # 3. UPDATE TOPICS.TXT (Delete used topic)
+    # Delete the used topic
     with open(TOPICS_FILE, "w", encoding="utf-8") as f:
         for topic in topics[1:]:
             f.write(topic + "\n")
