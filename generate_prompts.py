@@ -11,7 +11,7 @@ if not GEMINI_API_KEY:
     sys.exit(1)
 
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-3.5-flash')
+model = genai.GenerativeModel('gemini-3.6-flash')
 
 TOPICS_FILE = "topics.txt"
 PROMPTS_FILE = "prompts.txt"
